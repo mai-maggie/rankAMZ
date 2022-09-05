@@ -1,0 +1,23 @@
+{
+  "name": "rankamz",
+  "version": "1.0.0",
+  "description": "",
+  "main": "run.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mai-maggie/rankAMZ.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mai-maggie/rankAMZ/issues"
+  },
+  "homepage": "https://github.com/mai-maggie/rankAMZ#readme",
+  "dependencies": {
+    "jsdom": "^20.0.0"
+  }
+}
