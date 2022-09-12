@@ -1,6 +1,59 @@
 const jsdom = require("jsdom");
 const { JSDOM } = jsdom;
-const fs = require("fs");
+const Excel = require("exceljs");
+const date = require("date-and-time");
+
+//NOTE: get date
+var now = new Date();
+now = date.addDays(now, -1);
+var yesterday = date.format(now, "YYYY/MM/DD");
+
+//PURPOSE: find the first empty row in target worksheet
+//INPUT: worksheet
+//OUTPUT: find the number of the first empty row
+function emptyRowNumber(worksheet) {
+  let emptyRowNumber;
+  let i = 1;
+  while (i > 0) {
+    if (worksheet.getRow(i).values[1] === undefined) {
+      emptyRowNumber = i;
+      break;
+    } else {
+      i++;
+    }
+  }
+  return emptyRowNumber;
+}
+
+//PURPOSE: read an elsx file, add date and keywords
+async function workbookLoad() {
+  let wb = new Excel.Workbook();
+  wb = await wb.xlsx.readFile("target.xlsx");
+  //NOTE: add keywords
+  const keywordWorksheet = wb.getWorksheet("keywords");
+  const sourceKeywordsColumn = keywordWorksheet.getColumn("A");
+  const ws = wb.getWorksheet("data");
+  let targetKeywordsColumn = ws.getColumn("B");
+  let length = sourceKeywordsColumn.values.length;
+  let emptyRowNum = emptyRowNumber(ws); //WARNING:variable and function have to have different names!!!!
+  const diff = emptyRowNum - 2;
+  //NOTE: add date
+  const dateColumn = ws.getColumn("A");
+  for (let i = emptyRowNum; i < length; i++) {
+    ws.getRow(i).getCell(1).value = yesterday;
+  }
+  //NOTE: add keywords
+  let j = 2;
+  while (keywordWorksheet.getRow(j).getCell(1).value) {
+    let keyword = keywordWorksheet.getRow(j).getCell(1).value;
+    ws.getRow(j + diff).getCell(2).value = keyword;
+    j++;
+  }
+  await wb.xlsx.writeFile("target.xlsx");
+  console.log("done");
+}
+
+workbookLoad();
 
 //PURPOSE: deal with search keyword to url
 //INPUT: keyword to search
@@ -77,4 +130,4 @@ async function findAdIndexofASIN(targetAsin, keyword) {
   });
 }
 
-findAdIndexofASIN(process.argv[2], process.argv[3]);
+// workbookLoad();
