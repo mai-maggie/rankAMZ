@@ -20,6 +20,7 @@
   "dependencies": {
     "date-and-time": "^2.4.1",
     "exceljs": "^4.3.0",
-    "jsdom": "^20.0.0"
+    "jsdom": "^20.0.0",
+    "node-fetch": "^2.6.7"
   }
 }
