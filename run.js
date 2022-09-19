@@ -2,7 +2,6 @@ const jsdom = require("jsdom");
 const { JSDOM } = jsdom;
 const Excel = require("exceljs");
 const date = require("date-and-time");
-const fetch = require("node-fetch");
 
 //NOTE: get date
 var now = new Date();
@@ -29,34 +28,6 @@ function emptyRowNumber(worksheet, columnNum) {
   return emptyRowNumber;
 }
 
-//PURPOSE: read an elsx file, add date and keywords
-async function workbookLoad() {
-  let wb = new Excel.Workbook();
-  wb = await wb.xlsx.readFile("target.xlsx");
-  //NOTE: add keywords
-  const keywordWorksheet = wb.getWorksheet("keywords");
-  const sourceKeywordsColumn = keywordWorksheet.getColumn("A");
-  const ws = wb.getWorksheet("data");
-  let length = sourceKeywordsColumn.values.length;
-  let emptyRowNum = emptyRowNumber(ws, 1); //WARNING:variable and function have to have different names!!!!
-  const diff = emptyRowNum - 2;
-  //NOTE: add date
-  for (let i = emptyRowNum; i < length; i++) {
-    ws.getRow(i).getCell(1).value = yesterday;
-  }
-  //NOTE: add keywords
-  let j = 2;
-  while (keywordWorksheet.getRow(j).getCell(1).value) {
-    let keyword = keywordWorksheet.getRow(j).getCell(1).value;
-    let asin = keywordWorksheet.getRow(j).getCell(2).value;
-    ws.getRow(j + diff).getCell(2).value = keyword;
-    ws.getRow(j + diff).getCell(3).value = asin;
-    j++;
-  }
-  await wb.xlsx.writeFile("target.xlsx");
-  console.log("workbook done");
-}
-
 //PURPOSE: deal with search keyword to url
 //INPUT: keyword to search
 //OUTPUT: keyword url
@@ -78,12 +49,7 @@ function searchKeyword(keyword) {
 //INPUT: Asin,keyword,file,rownumber
 //OUTPUT: ASIN ranks and if it has SB,SBV
 async function countRank(targetAsin, kw) {
-  // const resourceLoader = new jsdom.ResourceLoader({
-  //   proxy: "http://217.138.252.14",
-  //   strictSSL: false,
-  // });
   let options = {
-    // resources: resourceLoader,
     resources: "usable",
   };
   let wb = new Excel.Workbook();
@@ -91,9 +57,6 @@ async function countRank(targetAsin, kw) {
   const ws = wb.getWorksheet("data");
   let document;
   let adAsinList = [];
-  // const response = await fetch(searchKeyword(kw));
-  // const body = await response.text();
-  // const dom = new JSDOM(body);
   JSDOM.fromURL(searchKeyword(kw), options).then((dom) => {
     document = dom.window.document;
     //NOTE: Ad rank
@@ -139,46 +102,78 @@ async function countRank(targetAsin, kw) {
     // console.log(`SB: ${findSBAsin}`);
 
     // //NOTE: SBV
-    const targetSpan = document.querySelector(
-      "span.a-size-base-plus.a-color-base.a-text-normal"
+    let targetSpanArray = [];
+    const targetSpans = document.querySelectorAll(
+      "span.a-size-medium.a-color-base.a-text-normal"
     );
-    if (targetSpan === null) {
-      ws.getRow(rowNumber).getCell(7).value = 0;
-    } else {
-      let targetSpanText = targetSpan.innerHTML;
-      if (
-        targetSpanText.includes("VocgoUU") === true ||
-        targetSpanText.includes("HEH") === true
-      ) {
-        // console.log("SBV:true");
+    if (targetSpans !== null || targetSpans !== undefined) {
+      targetSpans.forEach((targetSpan) => {
+        if (
+          targetSpan.innerHTML.includes("VocgoUU") === true ||
+          targetSpan.innerHTML.includes("HEH") === true
+        ) {
+          targetSpanArray.push(1);
+        }
+      });
+      if (targetSpanArray.length > 0) {
         ws.getRow(rowNumber).getCell(7).value = 1;
       } else {
-        // console.log("SBV:false");
         ws.getRow(rowNumber).getCell(7).value = 0;
       }
+    } else {
+      ws.getRow(rowNumber).getCell(7).value = 0;
     }
 
-    wb.xlsx.writeFile("target.xlsx");
     //TODO: check if there's AC tag
+    //NOTE: AC tag
+    const acTag = document.querySelector(`#${targetAsin}-amazons-choice`);
+    if (acTag === null || acTag === undefined) {
+      ws.getRow(rowNumber).getCell(8).value = 0;
+    } else {
+      ws.getRow(rowNumber).getCell(8).value = 1;
+    }
+    wb.xlsx.writeFile("target.xlsx");
   });
-  // await wb.xlsx.writeFile(file);
 }
-//TODO: automate the function to find asin and keyword in the excel file and write result into it.
-//PURPOSE: automate the function to find asin and keyword in the excel file and write result into it.
-async function fillAutoExcel() {
-  await workbookLoad();
-  let wb = new Excel.Workbook();
-  wb = await wb.xlsx.readFile("target.xlsx");
-  ws = wb.getWorksheet("data");
-  let emptyRowNum = emptyRowNumber(ws, 4);
-  columnLength = ws.getColumn("A").values.length + emptyRowNum;
-  for (let i = emptyRowNum; i < columnLength - 2; i++) {
-    let keyword = ws.getRow(i).getCell(2).value;
-    let asin = ws.getRow(i).getCell(3).value;
-    await countRank(asin, keyword, "target.xlsx", i);
-  }
-}
+//NOTE: have to execute one by one
 
-// fillAutoExcel();
-// workbookLoad();
+// await countRank("B09MDHMPZD", "2x4 led drop ceiling light fixture");
+// await countRank("B09MDHMPZD", "2x4 led light fixture");
+// await countRank("B09MDHMPZD", "2x4 led flat panel light 5000k");
+// await countRank("B09MDHMPZD", "led panel lights 2x4");
+// await countRank("B09MDHMPZD", "2x4 led troffer");
+// await countRank("B09MDHMPZD", "2x4 led flat panel light");
+// await countRank("B09MDHMPZD", "led flat panel light 2x4");
+// await countRank("B09MDHMPZD", "led 2x4 flat panel light");
+// await countRank("B09MDHMPZD", "2x4 led panel");
+// await countRank("B09MDHMPZD", "led drop ceiling lights 2x4");
+// await countRank("B09MDHMPZD", "troffer light 2x4");
+// await countRank("B09MDHMPZD", "led 2x4 drop ceiling lights");
+// await countRank("B09MDHMPZD", "2x4 light fixture");
+// await countRank("B09MDHMPZD", "2x4 led");
+// await countRank("B09MDHMPZD", "2'x4' led flat light panel");
+
+// countRank("B09MDGNFJV", "2x2 led flat panel light");
+// countRank("B09MDGNFJV", "2x2 led light drop ceiling");
+// countRank("B09MDGNFJV", "2x2 led flat panel light 4000k");
+// countRank("B09MDGNFJV", "2x2 led flat panel light 5000k");
+// countRank("B09MDGNFJV", "led drop ceiling lights 2x2");
+// countRank("B09MDGNFJV", "2x2 led panel");
+// countRank("B09MDGNFJV", "2x2 led light");
+// countRank("B09MDGNFJV", "2x2 lay in led light fixtures");
+// countRank("B09MDGNFJV", "2x2 led");
+
+// countRank("B07HH46NHF", "2x4 surface mount kit");
+// countRank("B07HH46NHF", "surface mount kit 2x4");
+// countRank("B07HH46NHF", "2x4 led surface mount kit");
+// countRank("B07HH46NHF", "2x4 flat panel mount kit");
+
+// countRank("B08DRKT5N5", "2x2 surface mount kit");
+// countRank("B08DRKT5N5", "2x2 led panels surface mount kit");
+// countRank("B08DRKT5N5", "led 2x2 surface mount frames");
+
+// countRank("B08CHB5B7L", "1x4 surface mount kit");
+// countRank("B08CHB5B7L", "1x4 led flat panel mount kit");
+// countRank("B08CHB5B7L", "10 pack 1x4 ft led surface mount kit");
+
 countRank(process.argv[2], process.argv[3]);
